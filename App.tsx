@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, PanResponder, GestureResponderEvent, PanResponderGestureState, Text, Button } from 'react-native';
 import Board from './components/Board';
 import Player from './components/Player';
@@ -18,21 +18,31 @@ const App: React.FC = () => {
 
   const [position, setPosition] = useState({ x: 1, y: 1 });
   const [points, setPoints] = useState(0);
+  const [level, setLevel] = useState(1);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [ghosts, setGhosts] = useState([
-    { x: 8, y: 1 },
-    { x: 8, y: 5 },
-    { x: 5, y: 3 },
-    { x: 2, y: 6 },
+    { x: 8, y: 1, isSmart: true },
+    { x: 8, y: 5, isSmart: false },
+    { x: 5, y: 3, isSmart: false },
+    { x: 2, y: 6, isSmart: false },
   ]);
   const [board, setBoard] = useState(initialBoard);
+  const gameInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!isGameOver) {
-      const interval = setInterval(moveGhosts, 1000 - points * 10); // Aumenta a velocidade dos fantasmas com mais pontos
-      return () => clearInterval(interval);
+    if (!isGameOver && !isPaused) {
+      gameInterval.current = setInterval(moveGhosts, 1000 - points * 10); // Aumenta a velocidade dos fantasmas com mais pontos
+      return () => clearInterval(gameInterval.current!);
     }
-  }, [ghosts, isGameOver, points]);
+  }, [ghosts, isGameOver, isPaused, points]);
+
+  useEffect(() => {
+    if (isGameOver) {
+      const timeout = setTimeout(() => restartGame(), 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [isGameOver]);
 
   const movePlayer = (direction: string) => {
     setPosition((prevPosition) => {
@@ -54,9 +64,21 @@ const App: React.FC = () => {
       if (board[newPosition.y][newPosition.x] !== 1) {
         if (board[newPosition.y][newPosition.x] === 2) {
           setPoints(points + 1);
-          const newBoard = board.map(row => row.slice());
+          const newBoard = board.map((row) => row.slice());
           newBoard[newPosition.y][newPosition.x] = 0;
           setBoard(newBoard);
+          if (newBoard.flat().filter((cell) => cell === 2).length === 0) {
+            setLevel(level + 1);
+            setPoints(points + 10); // Bônus por completar o nível
+            setBoard(initialBoard);
+            setPosition({ x: 1, y: 1 });
+            setGhosts([
+              { x: 8, y: 1, isSmart: true },
+              { x: 8, y: 5, isSmart: false },
+              { x: 5, y: 3, isSmart: false },
+              { x: 2, y: 6, isSmart: false },
+            ]);
+          }
         }
         if (checkCollision(newPosition, ghosts)) {
           setIsGameOver(true);
@@ -70,20 +92,49 @@ const App: React.FC = () => {
   const moveGhosts = () => {
     setGhosts((prevGhosts) => {
       return prevGhosts.map((ghost) => {
-        const possibleMoves = [
-          { x: ghost.x, y: ghost.y - 1 }, // up
-          { x: ghost.x, y: ghost.y + 1 }, // down
-          { x: ghost.x - 1, y: ghost.y }, // left
-          { x: ghost.x + 1, y: ghost.y }, // right
-        ].filter((move) => board[move.y] && board[move.y][move.x] !== 1); // Verifique a existência da linha e se não é uma parede
-
-        const newGhost = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-        if (checkCollision(newGhost, [position])) {
-          setIsGameOver(true);
+        if (ghost.isSmart) {
+          return moveSmartGhost(ghost);
+        } else {
+          return moveRandomGhost(ghost);
         }
-        return newGhost;
       });
     });
+  };
+
+  const moveSmartGhost = (ghost: { x: number; y: number; isSmart: boolean }) => {
+    const possibleMoves = [
+      { x: ghost.x, y: ghost.y - 1 }, // up
+      { x: ghost.x, y: ghost.y + 1 }, // down
+      { x: ghost.x - 1, y: ghost.y }, // left
+      { x: ghost.x + 1, y: ghost.y }, // right
+    ].filter((move) => board[move.y] && board[move.y][move.x] !== 1);
+
+    possibleMoves.sort((a, b) => {
+      const distA = Math.abs(a.x - position.x) + Math.abs(a.y - position.y);
+      const distB = Math.abs(b.x - position.x) + Math.abs(b.y - position.y);
+      return distA - distB;
+    });
+
+    const newGhost = possibleMoves[0];
+    if (checkCollision(newGhost, [position])) {
+      setIsGameOver(true);
+    }
+    return newGhost;
+  };
+
+  const moveRandomGhost = (ghost: { x: number; y: number; isSmart: boolean }) => {
+    const possibleMoves = [
+      { x: ghost.x, y: ghost.y - 1 }, // up
+      { x: ghost.x, y: ghost.y + 1 }, // down
+      { x: ghost.x - 1, y: ghost.y }, // left
+      { x: ghost.x + 1, y: ghost.y }, // right
+    ].filter((move) => board[move.y] && board[move.y][move.x] !== 1);
+
+    const newGhost = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+    if (checkCollision(newGhost, [position])) {
+      setIsGameOver(true);
+    }
+    return newGhost;
   };
 
   const checkCollision = (position1: { x: number; y: number }, positions: { x: number; y: number }[]) => {
@@ -93,14 +144,19 @@ const App: React.FC = () => {
   const restartGame = () => {
     setPosition({ x: 1, y: 1 });
     setPoints(0);
+    setLevel(1);
     setIsGameOver(false);
     setGhosts([
-      { x: 8, y: 1 },
-      { x: 8, y: 5 },
-      { x: 5, y: 3 },
-      { x: 2, y: 6 },
+      { x: 8, y: 1, isSmart: true },
+      { x: 8, y: 5, isSmart: false },
+      { x: 5, y: 3, isSmart: false },
+      { x: 2, y: 6, isSmart: false },
     ]);
     setBoard(initialBoard);
+  };
+
+  const togglePause = () => {
+    setIsPaused(!isPaused);
   };
 
   const panResponder = PanResponder.create({
@@ -125,22 +181,24 @@ const App: React.FC = () => {
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
+      <View style={styles.header}>
+        <Text style={styles.points}>Points: {points}</Text>
+        <Text style={styles.level}>Level: {level}</Text>
+        <Button title={isPaused ? "Resume" : "Pause"} onPress={togglePause} />
+      </View>
       {isGameOver ? (
         <View style={styles.gameOver}>
           <Text style={styles.gameOverText}>Game Over</Text>
-          <Button title="Restart" onPress={restartGame} />
+          <Button title="Restart Now" onPress={restartGame} />
         </View>
       ) : (
-        <>
-          <Text style={styles.points}>Points: {points}</Text>
-          <View style={styles.boardContainer}>
-            <Board board={board} />
-            <Player position={position} />
-            {ghosts.map((ghost, index) => (
-              <Ghost key={index} position={ghost} />
-            ))}
-          </View>
-        </>
+        <View style={styles.boardContainer}>
+          <Board board={board} />
+          <Player position={position} />
+          {ghosts.map((ghost, index) => (
+            <Ghost key={index} position={ghost} />
+          ))}
+        </View>
       )}
     </View>
   );
@@ -153,10 +211,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#000',
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '80%',
+    marginBottom: 20,
+  },
   points: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: '#fff',
+  },
+  level: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#fff',
   },
   gameOver: {
