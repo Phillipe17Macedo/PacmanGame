@@ -14,7 +14,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 1,
-    borderColor: 'gray',
+    borderColor: '#000',
   },
   wall: {
     backgroundColor: 'blue',
