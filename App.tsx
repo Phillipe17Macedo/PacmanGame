@@ -5,14 +5,7 @@ import Player from './components/Player';
 import Ghost from './components/Ghost';
 
 const App: React.FC = () => {
-  const [position, setPosition] = useState({ x: 1, y: 1 });
-  const [points, setPoints] = useState(0);
-  const [isGameOver, setIsGameOver] = useState(false);
-  const [ghosts, setGhosts] = useState([
-    { x: 8, y: 1 },
-    { x: 8, y: 5 },
-  ]);
-  const [board, setBoard] = useState([
+  const initialBoard = [
     // 0: empty, 1: wall, 2: point
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 2, 2, 2, 1, 2, 2, 2, 2, 1],
@@ -20,15 +13,26 @@ const App: React.FC = () => {
     [1, 2, 1, 2, 2, 2, 2, 1, 2, 1],
     [1, 2, 1, 1, 1, 2, 1, 1, 2, 1],
     [1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ];
+
+  const [position, setPosition] = useState({ x: 1, y: 1 });
+  const [points, setPoints] = useState(0);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [ghosts, setGhosts] = useState([
+    { x: 8, y: 1 },
+    { x: 8, y: 5 },
+    { x: 5, y: 3 },
+    { x: 2, y: 6 },
   ]);
+  const [board, setBoard] = useState(initialBoard);
 
   useEffect(() => {
     if (!isGameOver) {
-      const interval = setInterval(moveGhosts, 1000);
+      const interval = setInterval(moveGhosts, 1000 - points * 10); // Aumenta a velocidade dos fantasmas com mais pontos
       return () => clearInterval(interval);
     }
-  }, [ghosts, isGameOver]);
+  }, [ghosts, isGameOver, points]);
 
   const movePlayer = (direction: string) => {
     setPosition((prevPosition) => {
@@ -71,7 +75,7 @@ const App: React.FC = () => {
           { x: ghost.x, y: ghost.y + 1 }, // down
           { x: ghost.x - 1, y: ghost.y }, // left
           { x: ghost.x + 1, y: ghost.y }, // right
-        ].filter((move) => board[move.y][move.x] !== 1);
+        ].filter((move) => board[move.y] && board[move.y][move.x] !== 1); // Verifique a existência da linha e se não é uma parede
 
         const newGhost = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
         if (checkCollision(newGhost, [position])) {
@@ -90,16 +94,13 @@ const App: React.FC = () => {
     setPosition({ x: 1, y: 1 });
     setPoints(0);
     setIsGameOver(false);
-    setGhosts([{ x: 8, y: 1 }, { x: 8, y: 5 }]);
-    setBoard([
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      [1, 2, 2, 2, 1, 2, 2, 2, 2, 1],
-      [1, 2, 1, 2, 1, 2, 1, 1, 2, 1],
-      [1, 2, 1, 2, 2, 2, 2, 1, 2, 1],
-      [1, 2, 1, 1, 1, 2, 1, 1, 2, 1],
-      [1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
-      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    setGhosts([
+      { x: 8, y: 1 },
+      { x: 8, y: 5 },
+      { x: 5, y: 3 },
+      { x: 2, y: 6 },
     ]);
+    setBoard(initialBoard);
   };
 
   const panResponder = PanResponder.create({
@@ -169,6 +170,8 @@ const styles = StyleSheet.create({
   },
   boardContainer: {
     position: 'relative',
+    width: 200,
+    height: 140,
   },
 });
 
