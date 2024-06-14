@@ -132,11 +132,13 @@ const App: React.FC = () => {
       ) : (
         <>
           <Text style={styles.points}>Points: {points}</Text>
-          <Board board={board} />
-          <Player position={position} />
-          {ghosts.map((ghost, index) => (
-            <Ghost key={index} position={ghost} />
-          ))}
+          <View style={styles.boardContainer}>
+            <Board board={board} />
+            <Player position={position} />
+            {ghosts.map((ghost, index) => (
+              <Ghost key={index} position={ghost} />
+            ))}
+          </View>
         </>
       )}
     </View>
@@ -148,13 +150,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000'
+    backgroundColor: '#000',
   },
   points: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#fff'
+    color: '#fff',
   },
   gameOver: {
     alignItems: 'center',
@@ -164,6 +166,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'red',
     marginBottom: 20,
+  },
+  boardContainer: {
+    position: 'relative',
   },
 });
 

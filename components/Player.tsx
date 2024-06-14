@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { Animated, StyleSheet } from 'react-native';
 
 interface PlayerProps {
   position: { x: number; y: number };

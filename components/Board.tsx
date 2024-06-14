@@ -23,6 +23,7 @@ const Board: React.FC<BoardProps> = ({ board }) => {
 const styles = StyleSheet.create({
   board: {
     flexDirection: 'column',
+    position: 'relative',
   },
   row: {
     flexDirection: 'row',
