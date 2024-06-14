@@ -1,12 +1,20 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 
 interface PlayerProps {
   position: { x: number; y: number };
 }
 
 const Player: React.FC<PlayerProps> = ({ position }) => {
-  return <View style={[styles.player, { top: position.y * 20, left: position.x * 20 }]} />;
+  const animatedValue = new Animated.ValueXY({ x: position.x * 20, y: position.y * 20 });
+
+  Animated.timing(animatedValue, {
+    toValue: { x: position.x * 20, y: position.y * 20 },
+    duration: 200,
+    useNativeDriver: false,
+  }).start();
+
+  return <Animated.View style={[styles.player, animatedValue.getLayout()]} />;
 };
 
 const styles = StyleSheet.create({
