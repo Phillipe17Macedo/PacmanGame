@@ -6,7 +6,7 @@ interface CellProps {
 }
 
 const Cell: React.FC<CellProps> = ({ type }) => {
-  return <View style={[styles.cell, type === 1 && styles.wall, type === 2 && styles.point]} />;
+  return <View style={[styles.cell, type === 1 && styles.wall, type === 2 && styles.point, type === 3 && styles.powerUp]} />;
 };
 
 const styles = StyleSheet.create({
@@ -21,6 +21,9 @@ const styles = StyleSheet.create({
   },
   point: {
     backgroundColor: 'orange',
+  },
+  powerUp: {
+    backgroundColor: 'green',
   },
 });
 

@@ -6,10 +6,10 @@ import Ghost from './components/Ghost';
 
 const App: React.FC = () => {
   const initialBoard = [
-    // 0: empty, 1: wall, 2: point
+    // 0: empty, 1: wall, 2: point, 3: power-up
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 2, 2, 2, 1, 2, 2, 2, 2, 1],
-    [1, 2, 1, 2, 1, 2, 1, 1, 2, 1],
+    [1, 2, 1, 2, 1, 3, 1, 1, 2, 1],
     [1, 2, 1, 2, 2, 2, 2, 1, 2, 1],
     [1, 2, 1, 1, 1, 2, 1, 1, 2, 1],
     [1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [level, setLevel] = useState(1);
   const [isGameOver, setIsGameOver] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [powerUpActive, setPowerUpActive] = useState(false);
   const [ghosts, setGhosts] = useState([
     { x: 8, y: 1, isSmart: true },
     { x: 8, y: 5, isSmart: false },
@@ -29,10 +30,11 @@ const App: React.FC = () => {
   ]);
   const [board, setBoard] = useState(initialBoard);
   const gameInterval = useRef<NodeJS.Timeout | null>(null);
+  const powerUpTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!isGameOver && !isPaused) {
-      gameInterval.current = setInterval(moveGhosts, 1000 - points * 10); // Aumenta a velocidade dos fantasmas com mais pontos
+      gameInterval.current = setInterval(moveGhosts, Math.max(200, 1000 - points * 10)); // Aumenta a velocidade dos fantasmas com mais pontos
       return () => clearInterval(gameInterval.current!);
     }
   }, [ghosts, isGameOver, isPaused, points]);
@@ -43,6 +45,16 @@ const App: React.FC = () => {
       return () => clearTimeout(timeout);
     }
   }, [isGameOver]);
+
+  const activatePowerUp = () => {
+    setPowerUpActive(true);
+    if (powerUpTimeout.current) {
+      clearTimeout(powerUpTimeout.current);
+    }
+    powerUpTimeout.current = setTimeout(() => {
+      setPowerUpActive(false);
+    }, 5000);
+  };
 
   const movePlayer = (direction: string) => {
     setPosition((prevPosition) => {
@@ -64,24 +76,33 @@ const App: React.FC = () => {
       if (board[newPosition.y][newPosition.x] !== 1) {
         if (board[newPosition.y][newPosition.x] === 2) {
           setPoints(points + 1);
-          const newBoard = board.map((row) => row.slice());
-          newBoard[newPosition.y][newPosition.x] = 0;
-          setBoard(newBoard);
-          if (newBoard.flat().filter((cell) => cell === 2).length === 0) {
-            setLevel(level + 1);
-            setPoints(points + 10); // Bônus por completar o nível
-            setBoard(initialBoard);
-            setPosition({ x: 1, y: 1 });
-            setGhosts([
-              { x: 8, y: 1, isSmart: true },
-              { x: 8, y: 5, isSmart: false },
-              { x: 5, y: 3, isSmart: false },
-              { x: 2, y: 6, isSmart: false },
-            ]);
-          }
+        } else if (board[newPosition.y][newPosition.x] === 3) {
+          activatePowerUp();
         }
+
+        const newBoard = board.map((row) => row.slice());
+        newBoard[newPosition.y][newPosition.x] = 0;
+        setBoard(newBoard);
+
+        if (newBoard.flat().filter((cell) => cell === 2 || cell === 3).length === 0) {
+          setLevel(level + 1);
+          setPoints(points + 10); // Bônus por completar o nível
+          setBoard(initialBoard);
+          setPosition({ x: 1, y: 1 });
+          setGhosts([
+            { x: 8, y: 1, isSmart: true },
+            { x: 8, y: 5, isSmart: false },
+            { x: 5, y: 3, isSmart: false },
+            { x: 2, y: 6, isSmart: false },
+          ]);
+        }
+
         if (checkCollision(newPosition, ghosts)) {
-          setIsGameOver(true);
+          if (powerUpActive) {
+            setGhosts((prevGhosts) => prevGhosts.map((ghost) => (ghost.x === newPosition.x && ghost.y === newPosition.y ? { ...ghost, x: 0, y: 0 } : ghost)));
+          } else {
+            setIsGameOver(true);
+          }
         }
         return newPosition;
       }
@@ -119,7 +140,7 @@ const App: React.FC = () => {
     if (checkCollision(newGhost, [position])) {
       setIsGameOver(true);
     }
-    return newGhost;
+    return { ...newGhost, isSmart: ghost.isSmart };
   };
 
   const moveRandomGhost = (ghost: { x: number; y: number; isSmart: boolean }) => {
@@ -134,7 +155,7 @@ const App: React.FC = () => {
     if (checkCollision(newGhost, [position])) {
       setIsGameOver(true);
     }
-    return newGhost;
+    return { ...newGhost, isSmart: ghost.isSmart };
   };
 
   const checkCollision = (position1: { x: number; y: number }, positions: { x: number; y: number }[]) => {
@@ -196,7 +217,7 @@ const App: React.FC = () => {
           <Board board={board} />
           <Player position={position} />
           {ghosts.map((ghost, index) => (
-            <Ghost key={index} position={ghost} />
+            <Ghost key={index} position={ghost} powerUpActive={powerUpActive} />
           ))}
         </View>
       )}

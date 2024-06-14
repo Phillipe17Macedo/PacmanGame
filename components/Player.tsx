@@ -10,7 +10,7 @@ const Player: React.FC<PlayerProps> = ({ position }) => {
 
   Animated.timing(animatedValue, {
     toValue: { x: position.x * 20, y: position.y * 20 },
-    duration: 200,
+    duration: 100,
     useNativeDriver: false,
   }).start();
 
